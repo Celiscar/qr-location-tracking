@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Location</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Check-in to the Office</h1>
+    <button id="getLocationButton">Get My Location</button>
+    <p id="locationInfo" class="hidden"></p>
+    <form id="locationForm" class="hidden">
+        <input type="hidden" id="latitude" name="latitude">
+        <input type="hidden" id="longitude" name="longitude">
+        <input type="text" id="locationStatus" name="locationStatus" disabled placeholder="Location Status">
+        <button type="submit">Submit</button>
+    </form>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Office's known coordinates (latitude and longitude)
+        const officeLatitude = 1.2921;  // Example: replace with actual latitude
+        const officeLongitude = 36.8219;  // Example: replace with actual longitude
+        const maxDistance = 500;  // 500 meters
+
+        // When the user clicks the button to get their location
+        document.getElementById('getLocationButton').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(onLocationSuccess, onLocationError);
+            } else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        });
+
+        // If the location is successfully obtained
+        function onLocationSuccess(position) {
+            const latitude = position.coords.latitude;
+            const longitude = position.coords.longitude;
+            document.getElementById('latitude').value = latitude;
+            document.getElementById('longitude').value = longitude;
+
+            // Calculate the distance from the office using Haversine formula
+            const distance = getDistanceFromLatLonInKm(latitude, longitude, officeLatitude, officeLongitude);
+
+            // Check if the user is near the office
+            if (distance <= maxDistance / 1000) {  // maxDistance in km
+                document.getElementById('locationStatus').value = "Near the Office";
+            } else {
+                document.getElementById('locationStatus').value = "Not Near the Office";
+            }
+
+            // Show the form for submission
+            document.getElementById('locationInfo').innerText = `Your location: Latitude: ${latitude}, Longitude: ${longitude}`;
+            document.getElementById('locationInfo').classList.remove('hidden');
+            document.getElementById('locationForm').classList.remove('hidden');
+        }
+
+        // If there is an error with geolocation
+        function onLocationError(error) {
+            alert("Error obtaining location: " + error.message);
+        }
+
+        // Haversine formula to calculate the distance between two lat/long coordinates
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;  // Radius of the earth in km
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const distance = R * c; // Distance in km
+            return distance;
+        }
+
+        // Convert degrees to radians
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        // Handle form submission
+        document.getElementById('locationForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const data = {
+                latitude: document.getElementById('latitude').value,
+                longitude: document.getElementById('longitude').value,
+                locationStatus: document.getElementById('locationStatus').value
+            };
+
+            // Send the data to Google Sheets or your backend
+            sendDataToSheet(data);
+        });
+
+        // Send location data to Google Sheets (via Google Apps Script or your backend)
+        function sendDataToSheet(data) {
+            $.ajax({
+                url: 'YOUR_GOOGLE_SCRIPT_OR_BACKEND_URL',
+                type: 'POST',
+                data: data,
+                success: function(response) {
+                    alert("Location Submitted Successfully!");
+                },
+                error: function(error) {
+                    alert("Error submitting location data.");
+                }
+            });
+        }
+    </script>
+</body>
+</html>
